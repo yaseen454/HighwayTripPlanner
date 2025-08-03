@@ -19,11 +19,18 @@
 </head>
 <body class="min-h-screen flex flex-col">
     <!-- Header Section -->
-    <header class="bg-white shadow-sm">
+    <header class="bg-white shadow-sm relative">
         <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center">
             <h1 class="text-3xl font-bold text-gray-900">Highway Trip Planner</h1>
             <p class="mt-1 text-md text-gray-600">Estimate your fuel costs with speed-adjusted efficiency.</p>
         </div>
+        <!-- GitHub Link in Top Right -->
+        <a href="https://github.com/yaseen454/HighwayTripPlanner" target="_blank" class="absolute top-4 right-4 flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.164 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.34-3.369-1.34-.454-1.153-1.11-1.46-1.11-1.46-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.087.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.646 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.026 2.747-1.026.546 1.376.203 2.394.1 2.646.64.699 1.026 1.592 1.026 2.683 0 3.841-2.337 4.687-4.565 4.935.359.31.678.921.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12c0-5.523-4.477-10-10-10z" clip-rule="evenodd"/>
+            </svg>
+            <span class="text-sm font-medium">GitHub</span>
+        </a>
     </header>
     <!-- Main Content -->
     <main class="flex-grow w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -138,12 +145,6 @@
             </div>
         </div>
     </main>
-    <!-- Footer -->
-    <footer class="bg-white mt-8">
-        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 text-center text-sm text-gray-500">
-            <p>&copy; 2025 Highway Fuel Planner. All rights reserved.</p>
-        </div>
-    </footer>
     <!-- Link to your JavaScript file -->
     <script src="script.js"></script>
 </body>
