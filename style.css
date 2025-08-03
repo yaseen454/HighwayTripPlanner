@@ -1,0 +1,138 @@
+/* Custom styles to complement Tailwind */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f8fafc; /* A slightly lighter gray */
+}
+
+/* Custom styles for the input fields for a cleaner look */
+.input-field {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background-color: #f9fafb;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* Custom styles for the range slider */
+.speed-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 9999px;
+    width: 100%;
+}
+
+.speed-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    background: #3b82f6;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+    border: 4px solid #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.speed-slider::-webkit-slider-thumb:hover {
+    background: #2563eb;
+}
+
+.speed-slider::-webkit-slider-thumb:active {
+    transform: scale(1.1);
+}
+
+.speed-slider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    background: #3b82f6;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: 4px solid #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Styles for the output tabs */
+.tab-btn {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #4b5563;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.tab-btn:hover {
+    color: #1d4ed8;
+    background-color: #eff6ff;
+}
+
+/* The 'active' class will be toggled by JavaScript */
+.tab-btn.active {
+    color: #2563eb;
+    border-color: #2563eb;
+}
+
+/* A simple fade-in animation for tab content */
+.tab-content {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Styling for the output data grid */
+.output-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.output-item {
+    background-color: #f9fafb;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+}
+
+.output-item .label {
+    font-weight: 500;
+    color: #6b7280;
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.output-item .value {
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 1.125rem;
+}
+
+.output-item .unit {
+    font-size: 0.875rem;
+    color: #4b5563;
+    margin-left: 0.25rem;
+}
+
+/* Styles for dynamic input rows */
+#subscriptionsContainer, #tripExpensesContainer {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.remove-btn:hover {
+    transform: scale(1.1);
+}

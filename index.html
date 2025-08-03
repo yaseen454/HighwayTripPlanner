@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Highway Fuel Planner</title>
+    <!-- Tailwind CSS for base styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for a nicer typeface -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="apple-touch-icon" sizes="180x180" href="data/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="data/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="data/favicon-16x16.png">
+    <link rel="manifest" href="data/site.webmanifest">
+    <!-- Link to your custom stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="min-h-screen flex flex-col">
+    <!-- Header Section -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center">
+            <h1 class="text-3xl font-bold text-gray-900">Highway Trip Planner</h1>
+            <p class="mt-1 text-md text-gray-600">Estimate your fuel costs with speed-adjusted efficiency.</p>
+        </div>
+    </header>
+    <!-- Main Content -->
+    <main class="flex-grow w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Input Section -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-semibold mb-6 text-gray-800 border-b pb-3">Your Trip Details</h2>
+                <!-- Vehicle Profile -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">🚗 Vehicle Profile</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="fuelPrice" class="block text-sm font-medium text-gray-600 mb-1">Fuel Price (EGP/L)</label>
+                            <input type="number" id="fuelPrice" value="17.25" step="0.01" min="0" class="input-field">
+                        </div>
+                        <div>
+                            <label for="tankCapacity" class="block text-sm font-medium text-gray-600 mb-1">Tank Capacity (L)</label>
+                            <input type="number" id="tankCapacity" value="37" step="1" min="0" class="input-field">
+                        </div>
+                        <div>
+                            <label for="fuelEfficiency" class="block text-sm font-medium text-gray-600 mb-1">Fuel Efficiency (km/L, comma-separated)</label>
+                            <input type="text" id="fuelEfficiency" value="15,15.5,15.8,15.9,16" class="input-field">
+                        </div>
+                    </div>
+                </div>
+                <!-- Speed Slider -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">🚀 Average Highway Speed</h3>
+                    <input type="range" id="speedSlider" min="50" max="120" value="80" class="w-full speed-slider">
+                    <div class="text-center mt-2 text-gray-700">Speed: <span id="speedValue" class="font-bold text-blue-600 text-lg">80</span> km/h</div>
+                </div>
+            </div>
+            <!-- Trip Inputs Section -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg relative">
+                <!-- Single Trip -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">📍 Single Trip</h3>
+                    <div>
+                        <label for="singleTripDistance" class="block text-sm font-medium text-gray-600 mb-1">Distance (km)</label>
+                        <input type="number" id="singleTripDistance" value="115" step="1" min="0" class="input-field">
+                    </div>
+                </div>
+                <!-- Long-Term Trip -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">🗓️ Long-Term Plan</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="longTermDistance" class="block text-sm font-medium text-gray-600 mb-1">Distance per Trip (km)</label>
+                            <input type="number" id="longTermDistance" value="115" step="1" min="0" class="input-field">
+                        </div>
+                        <div>
+                            <label for="durationMonths" class="block text-sm font-medium text-gray-600 mb-1">Duration (months)</label>
+                            <input type="number" id="durationMonths" value="9" step="1" min="0" class="input-field">
+                        </div>
+                        <div>
+                            <label for="tripsPerWeek" class="block text-sm font-medium text-gray-600 mb-1">Trips per Week</label>
+                            <input type="number" id="tripsPerWeek" value="5" step="1" min="0" class="input-field">
+                        </div>
+                        <!-- Subscriptions -->
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-600 mb-2">Monthly Subscriptions</h4>
+                            <div id="subscriptionsContainer" class="space-y-2"></div>
+                            <button id="addSubscription" class="mt-2 text-blue-600 hover:text-blue-700 font-medium flex items-center">
+                                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                Add Subscription
+                            </button>
+                        </div>
+                        <!-- Per-Trip Expenses -->
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-600 mb-2">Per-Trip Expenses</h4>
+                            <div id="tripExpensesContainer" class="space-y-2"></div>
+                            <button id="addTripExpense" class="mt-2 text-blue-600 hover:text-blue-700 font-medium flex items-center">
+                                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                Add Expense
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Calculate Button (Sticky) -->
+                <div class="sticky bottom-0 bg-white pt-4 -mx-6 px-6">
+                    <button id="calculateBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-all duration-300 shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300">
+                        Calculate
+                    </button>
+                </div>
+            </div>
+            <!-- Output Section -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800">Calculation Results</h2>
+                <div id="output" class="space-y-6">
+                    <!-- Tabs for Output -->
+                    <div class="border-b border-gray-200">
+                        <nav class="flex space-x-2" aria-label="Tabs">
+                            <button class="tab-btn active" data-tab="vehicle">Vehicle Profile</button>
+                            <button class="tab-btn" data-tab="single">Single Trip</button>
+                            <button class="tab-btn" data-tab="longterm">Long-Term Plan</button>
+                        </nav>
+                    </div>
+                    <!-- Tab Content Panels -->
+                    <div id="vehicle" class="tab-content">
+                        <div id="vehicleOutput" class="output-grid"></div>
+                    </div>
+                    <div id="single" class="tab-content hidden">
+                        <div id="singleOutput" class="output-grid"></div>
+                    </div>
+                    <div id="longterm" class="tab-content hidden">
+                        <div id="longtermOutput" class="output-grid"></div>
+                    </div>
+                    <div id="errorOutput" class="hidden text-center py-4">
+                        <p class="text-red-600 font-semibold bg-red-100 p-4 rounded-lg"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <!-- Footer -->
+    <footer class="bg-white mt-8">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 text-center text-sm text-gray-500">
+            <p>&copy; 2025 Highway Fuel Planner. All rights reserved.</p>
+        </div>
+    </footer>
+    <!-- Link to your JavaScript file -->
+    <script src="script.js"></script>
+</body>
+</html>
