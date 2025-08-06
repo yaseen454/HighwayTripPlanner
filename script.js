@@ -2,8 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- CLASS DEFINITION ---
     class FuelCalculator {
         static WEEKS_PER_MONTH = 4.345;
-        static DAYS_PER_WEEK = 7;
-        static OPTIMAL_SPEED_KMH = 80;
+        static OPTIMAL_SPEED_KMH = 75; // Adjusted for a better general average
         static EFFICIENCY_DROP_FACTOR = 0.00005;
 
         constructor(fuelPricePerLiter, maxFuelTankLiters, fuelEfficiencyKmPerL) {
@@ -24,12 +23,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         getSpeedAdjustedEfficiency(speedKmh) {
-            if (isNaN(speedKmh) || speedKmh < 50 || speedKmh > 120) {
-                throw new Error("Speed must be between 50 and 120 km/h.");
+            if (isNaN(speedKmh) || speedKmh < 0) {
+                throw new Error("Speed must be a valid number.");
             }
             const deltaSpeed = speedKmh - FuelCalculator.OPTIMAL_SPEED_KMH;
             const efficiencyFactor = 1 - FuelCalculator.EFFICIENCY_DROP_FACTOR * (deltaSpeed ** 2);
-            return this.avgEfficiencyKmL * Math.max(efficiencyFactor, 0.5);
+            return this.avgEfficiencyKmL * Math.max(efficiencyFactor, 0.5); // Cap efficiency drop
         }
 
         getVehicleProfile() {
@@ -37,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 "Fuel Price": { value: this.fuelPricePerLiter, unit: "EGP/L" },
                 "Tank Capacity": { value: this.maxFuelTankLiters, unit: "L" },
                 "Cost to Fill Tank": { value: this.maxFuelTankPrice, unit: "EGP" },
-                "Avg. Efficiency": { value: this.avgEfficiencyKmL, unit: `km/L at ${FuelCalculator.OPTIMAL_SPEED_KMH} km/h` },
+                "Avg. Efficiency": { value: this.avgEfficiencyKmL, unit: `km/L (at optimal speed)` },
                 "Avg. Range": { value: this.avgTheoreticalRangeKm, unit: "km" },
             };
         }
@@ -58,9 +57,9 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         }
 
-        planLongTermTrips(distancePerTripKm, durationMonths, tripsPerWeek, averageSpeedKmh = FuelCalculator.OPTIMAL_SPEED_KMH, monthlySubscriptions = {}, expensesPerTrip = {}) {
-            if ([distancePerTripKm, durationMonths, tripsPerWeek].some(arg => isNaN(arg) || arg < 0)) {
-                throw new Error("Distance, duration, and trips per week must be non-negative numbers.");
+        planLongTermTrips(distancePerTripKm, durationMonths, tripsPerWeek, averageSpeedKmh, monthlySubscriptions, expensesPerTrip, incomePercentage) {
+            if ([distancePerTripKm, durationMonths, tripsPerWeek, incomePercentage].some(arg => isNaN(arg) || arg < 0)) {
+                throw new Error("Distance, duration, trips per week, and income percentage must be non-negative numbers.");
             }
             const adjustedEfficiency = this.getSpeedAdjustedEfficiency(averageSpeedKmh);
             const totalWeeks = durationMonths * FuelCalculator.WEEKS_PER_MONTH;
@@ -68,15 +67,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const totalDistancePlanned = distancePerTripKm * totalTrips;
             const totalLitersNeeded = totalDistancePlanned / adjustedEfficiency;
             const totalFuelCost = totalLitersNeeded * this.fuelPricePerLiter;
-            let totalSubscriptionCost = 0;
-            for (const cost of Object.values(monthlySubscriptions)) {
-                totalSubscriptionCost += parseFloat(cost) * durationMonths;
-            }
-            let totalTripExpenseCost = 0;
-            for (const cost of Object.values(expensesPerTrip)) {
-                totalTripExpenseCost += parseFloat(cost) * totalTrips;
-            }
+            
+            const totalSubscriptionCost = Object.values(monthlySubscriptions).reduce((sum, cost) => sum + parseFloat(cost), 0) * durationMonths;
+            const totalTripExpenseCost = Object.values(expensesPerTrip).reduce((sum, cost) => sum + parseFloat(cost), 0) * totalTrips;
+            
             const grandTotalCost = totalFuelCost + totalSubscriptionCost + totalTripExpenseCost;
+            const avgMonthlyCost = durationMonths > 0 ? grandTotalCost / durationMonths : 0;
+            const requiredIncome = (incomePercentage > 0 && avgMonthlyCost > 0) ? (avgMonthlyCost / incomePercentage) * 100 : 0;
+
             return {
                 "Planning Period": { value: durationMonths, unit: "months" },
                 "Total Trips": { value: totalTrips, unit: "trips" },
@@ -86,7 +84,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 "Total Subscription Cost": { value: totalSubscriptionCost, unit: "EGP" },
                 "Total Per-Trip Expenses": { value: totalTripExpenseCost, unit: "EGP" },
                 "Grand Total Cost": { value: grandTotalCost, unit: "EGP" },
-                "Avg. Monthly Cost": { value: durationMonths > 0 ? grandTotalCost / durationMonths : 0, unit: "EGP" },
+                "Avg. Monthly Cost": { value: avgMonthlyCost, unit: "EGP" },
+                [`Income for Cost to be ${incomePercentage}%`]: { value: requiredIncome, unit: "EGP/month" },
             };
         }
     }
@@ -120,13 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         `;
-        div.querySelector('.remove-btn').addEventListener('click', () => {
-            div.remove();
-            calculate();
-        });
-        div.querySelectorAll('input').forEach(input => {
-            input.addEventListener('input', calculate);
-        });
+        div.querySelector('.remove-btn').addEventListener('click', () => div.remove());
         return div;
     };
 
@@ -135,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         container.querySelectorAll('.flex').forEach(row => {
             const name = row.querySelector('[data-type$="-name"]').value.trim();
             const cost = parseFloat(row.querySelector('[data-type$="-cost"]').value);
-            if (name && !isNaN(cost)) {
+            if (name && !isNaN(cost) && cost > 0) {
                 result[name] = cost;
             }
         });
@@ -145,9 +138,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const formatOutput = (data) => {
         let html = '';
         for (const [label, { value, unit }] of Object.entries(data)) {
+            let itemClass = 'output-item';
+            if (label === 'Grand Total Cost') {
+                itemClass = 'output-item output-item-total';
+            } else if (label === 'Avg. Monthly Cost') {
+                itemClass = 'output-item output-item-monthly';
+            } else if (label.includes('Income for Cost')) {
+                 itemClass = 'output-item output-item-income';
+            }
+            
             const formattedValue = Number.isFinite(value) ? value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : value;
             html += `
-                <div class="output-item">
+                <div class="${itemClass}">
                     <div class="label">${label}</div>
                     <div class="value">${formattedValue} <span class="unit">${unit}</span></div>
                 </div>`;
@@ -179,6 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const longTermDistance = parseFloat(document.getElementById('longTermDistance').value);
             const durationMonths = parseInt(document.getElementById('durationMonths').value, 10);
             const tripsPerWeek = parseInt(document.getElementById('tripsPerWeek').value, 10);
+            const incomePercentage = parseFloat(document.getElementById('incomePercentage').value);
             const subscriptions = parseKeyValueInputs(subscriptionsContainer);
             const tripExpenses = parseKeyValueInputs(tripExpensesContainer);
             const averageSpeed = parseFloat(speedSlider.value);
@@ -194,15 +197,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const profile = calculator.getVehicleProfile();
             vehicleOutput.innerHTML = formatOutput(profile);
 
-            if (!isNaN(singleTripDistance)) {
+            if (!isNaN(singleTripDistance) && singleTripDistance > 0) {
                 const singleTrip = calculator.calculateSingleTrip(singleTripDistance, averageSpeed);
                 singleOutput.innerHTML = formatOutput(singleTrip);
             } else {
                 singleOutput.innerHTML = '<p class="text-gray-500">Enter a distance to calculate.</p>';
             }
 
-            if (!isNaN(longTermDistance) && !isNaN(durationMonths) && !isNaN(tripsPerWeek)) {
-                const longTermPlan = calculator.planLongTermTrips(longTermDistance, durationMonths, tripsPerWeek, averageSpeed, subscriptions, tripExpenses);
+            if (!isNaN(longTermDistance) && !isNaN(durationMonths) && !isNaN(tripsPerWeek) && longTermDistance > 0 && durationMonths > 0 && tripsPerWeek > 0) {
+                const longTermPlan = calculator.planLongTermTrips(longTermDistance, durationMonths, tripsPerWeek, averageSpeed, subscriptions, tripExpenses, incomePercentage);
                 longtermOutput.innerHTML = formatOutput(longTermPlan);
             } else {
                 longtermOutput.innerHTML = '<p class="text-gray-500">Enter all long-term plan fields to calculate.</p>';
@@ -215,27 +218,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- EVENT LISTENERS ---
     speedSlider.addEventListener('input', (e) => {
         speedValue.textContent = e.target.value;
-        calculate();
+    });
+    
+    // Recalculate on any input change for real-time feedback
+    document.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', calculate);
     });
 
     calculateBtn.addEventListener('click', calculate);
 
     addSubscriptionBtn.addEventListener('click', () => {
         subscriptionsContainer.appendChild(createInputRow('Subscription'));
-        calculate();
     });
+
+
 
     addTripExpenseBtn.addEventListener('click', () => {
         tripExpensesContainer.appendChild(createInputRow('Expense'));
-        calculate();
     });
 
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
-            // Deactivate all buttons and hide all content
             tabButtons.forEach(btn => btn.classList.remove('active'));
             tabContents.forEach(content => content.classList.add('hidden'));
-            // Activate the clicked button and show its content
             button.classList.add('active');
             const tabId = button.getAttribute('data-tab');
             document.getElementById(tabId).classList.remove('hidden');
@@ -243,11 +248,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- INITIALIZATION ---
-    // Add initial subscription and expense rows with default values
     subscriptionsContainer.appendChild(createInputRow('Subscription', 'Parking', '550'));
     subscriptionsContainer.appendChild(createInputRow('Subscription', 'Mobile Data', '50'));
     tripExpensesContainer.appendChild(createInputRow('Expense', 'Snacks', '20'));
 
-    // Perform an initial calculation on page load
-    calculate();
+    calculate(); // Perform an initial calculation on page load
 });

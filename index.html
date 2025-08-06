@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Highway Fuel Planner</title>
+    <title>Vehicle Trip Calculator</title>
     <!-- Tailwind CSS for base styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts for a nicer typeface -->
@@ -21,8 +21,8 @@
     <!-- Header Section -->
     <header class="bg-white shadow-sm relative">
         <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center">
-            <h1 class="text-3xl font-bold text-gray-900">Highway Trip Planner</h1>
-            <p class="mt-1 text-md text-gray-600">Estimate your fuel costs with speed-adjusted efficiency.</p>
+            <h1 class="text-3xl font-bold text-gray-900">Vehicle Trip Calculator</h1>
+            <p class="mt-1 text-md text-gray-600">Estimate your fuel and trip costs based on average speed.</p>
         </div>
         <!-- GitHub Link in Top Right -->
         <a href="https://github.com/yaseen454/HighwayTripPlanner" target="_blank" class="absolute top-4 right-4 flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors">
@@ -58,8 +58,8 @@
                 </div>
                 <!-- Speed Slider -->
                 <div class="mb-6">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-3">🚀 Average Highway Speed</h3>
-                    <input type="range" id="speedSlider" min="50" max="120" value="80" class="w-full speed-slider">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">🚀 Average Speed</h3>
+                    <input type="range" id="speedSlider" min="30" max="140" value="80" class="w-full speed-slider">
                     <div class="text-center mt-2 text-gray-700">Speed: <span id="speedValue" class="font-bold text-blue-600 text-lg">80</span> km/h</div>
                 </div>
             </div>
@@ -88,6 +88,11 @@
                         <div>
                             <label for="tripsPerWeek" class="block text-sm font-medium text-gray-600 mb-1">Trips per Week</label>
                             <input type="number" id="tripsPerWeek" value="5" step="1" min="0" class="input-field">
+                        </div>
+                         <!-- Income Percentage -->
+                        <div>
+                            <label for="incomePercentage" class="block text-sm font-medium text-gray-600 mb-1">Monthly Cost as % of Income</label>
+                            <input type="number" id="incomePercentage" value="10" step="1" min="1" max="100" class="input-field">
                         </div>
                         <!-- Subscriptions -->
                         <div>
