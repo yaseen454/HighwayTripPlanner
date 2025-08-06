@@ -25,7 +25,7 @@ Built with modern web technologies like HTML, JavaScript, and Tailwind CSS, it o
     ```
 2.  **Navigate to the Project Directory**:
     ```bash
-    cd HighwayTripPlanner 
+    cd VTrip
     ```
     *(Note: The repository name might still be the original one unless changed on GitHub)*
 
