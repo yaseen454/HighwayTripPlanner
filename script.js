@@ -1,11 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- CONSTANTS ---
-    const TIME_UNITS_IN_DAYS = {
-        day: 1,
-        week: 7,
-        month: 30.4375, // Average days in a month
-        year: 365.25   // Accounts for leap years
-    };
+    const TIME_UNITS_IN_DAYS = { day: 1, week: 7, month: 30.4375, year: 365.25 };
     const DURATION_HIERARCHY = ['days', 'weeks', 'months', 'years'];
 
     // --- CLASS DEFINITION ---
@@ -60,39 +55,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         planLongTermTrips(params) {
             const {
-                distancePerTripKm,
-                planDuration, // { value, unit }
-                tripFrequency, // { value, unit }
-                averageSpeedKmh,
-                recurringExpenses, // [{ name, cost, period }]
-                expensesPerTrip, // { name: cost }
-                incomePercentage,
-                currency
+                distancePerTripKm, planDuration, tripFrequency, averageSpeedKmh,
+                recurringExpenses, expensesPerTrip, incomePercentage, currency
             } = params;
 
-            // 1. Calculate total duration in days
-            const totalDaysInPlan = planDuration.value * TIME_UNITS_IN_DAYS[planDuration.unit.slice(0, -1)]; // remove 's'
-
-            // 2. Calculate total number of trips
+            const totalDaysInPlan = planDuration.value * TIME_UNITS_IN_DAYS[planDuration.unit.slice(0, -1)];
             const tripsPerDay = tripFrequency.value / TIME_UNITS_IN_DAYS[tripFrequency.unit];
             const totalTrips = totalDaysInPlan * tripsPerDay;
-
-            // 3. Calculate total fuel cost
             const adjustedEfficiency = this.getSpeedAdjustedEfficiency(averageSpeedKmh);
             const totalDistancePlanned = distancePerTripKm * totalTrips;
             const totalLitersNeeded = totalDistancePlanned / adjustedEfficiency;
             const totalFuelCost = totalLitersNeeded * this.fuelPricePerLiter;
-
-            // 4. Calculate total recurring expenses
             const totalRecurringCost = recurringExpenses.reduce((sum, expense) => {
                 const expenseCyclesInPlan = totalDaysInPlan / TIME_UNITS_IN_DAYS[expense.period];
                 return sum + (expense.cost * expenseCyclesInPlan);
             }, 0);
-
-            // 5. Calculate total per-trip expenses
             const totalTripExpenseCost = Object.values(expensesPerTrip).reduce((sum, cost) => sum + parseFloat(cost), 0) * totalTrips;
-
-            // 6. Calculate grand totals
             const grandTotalCost = totalFuelCost + totalRecurringCost + totalTripExpenseCost;
             const totalMonths = totalDaysInPlan / TIME_UNITS_IN_DAYS.month;
             const avgMonthlyCost = totalMonths > 0 ? grandTotalCost / totalMonths : 0;
@@ -133,6 +111,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorText = errorOutput.querySelector('p');
     const tabButtons = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
+    const clearProfileBtn = document.getElementById('clearProfileBtn');
+    const clearPlansBtn = document.getElementById('clearPlansBtn');
+    const chartContainer = document.getElementById('chartContainer');
+    const chartCanvas = document.getElementById('costChart').getContext('2d');
+    let costChart;
 
     // --- HELPER FUNCTIONS ---
     const parseInputList = (input) => input ? input.split(',').map(val => parseFloat(val.trim())).filter(val => !isNaN(val)) : [];
@@ -146,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         if (type === 'Recurring') {
             html += `
-                <select class="input-field w-28" data-type="${type}-period">
+                <select class="input-field w-28" data-type="${type}-period" title="Select how often this expense occurs.">
                     <option value="day">per Day</option>
                     <option value="week">per Week</option>
                     <option value="month" selected>per Month</option>
@@ -223,14 +206,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let validFrequencies = [];
 
         if (selectedIndex >= 0) {
-            const allowedUnits = DURATION_HIERARCHY.slice(0, selectedIndex + 1);
-            if (allowedUnits.includes('years')) allowedUnits[allowedUnits.indexOf('years')] = 'year';
-            if (allowedUnits.includes('months')) allowedUnits[allowedUnits.indexOf('months')] = 'month';
-            if (allowedUnits.includes('weeks')) allowedUnits[allowedUnits.indexOf('weeks')] = 'week';
-            if (allowedUnits.includes('days')) allowedUnits[allowedUnits.indexOf('days')] = 'day';
-            
-            validFrequencies = ['day', 'week', 'month', 'year'].filter(unit => allowedUnits.includes(unit) || allowedUnits.includes(unit+'s'));
-
+            const allowedUnits = DURATION_HIERARCHY.slice(0, selectedIndex + 1).map(u => u.slice(0, -1));
+            validFrequencies = ['day', 'week', 'month', 'year'].filter(unit => allowedUnits.includes(unit));
             validFrequencies.forEach(unit => {
                 newFrequencyOptions += `<option value="${unit}">per ${unit.charAt(0).toUpperCase() + unit.slice(1)}</option>`;
             });
@@ -238,11 +215,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         tripFrequencyUnit.innerHTML = newFrequencyOptions;
 
-        // Try to preserve the previous selection if it's still valid
         if (validFrequencies.includes(currentFrequencyValue)) {
             tripFrequencyUnit.value = currentFrequencyValue;
         } else {
-            // Default to the largest valid unit if previous is invalid
             tripFrequencyUnit.value = validFrequencies.length > 0 ? validFrequencies[validFrequencies.length - 1] : 'day';
         }
     };
@@ -254,11 +229,85 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const hideError = () => errorOutput.classList.add('hidden');
 
+    // --- CHART LOGIC ---
+    const initializeChart = () => {
+        costChart = new Chart(chartCanvas, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Grand Total Cost',
+                        data: [],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y',
+                    },
+                    {
+                        label: 'Avg. Monthly Cost',
+                        data: [],
+                        borderColor: '#16a34a',
+                        backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { title: { display: true, text: 'Speed (km/h)' } },
+                    y: { title: { display: true, text: 'Cost' }, beginAtZero: true }
+                },
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                     legend: {
+                        position: 'top',
+                    },
+                },
+            }
+        });
+    };
+
+    const updateChart = (calculator, longTermParams) => {
+        if (!calculator || !longTermParams || [longTermParams.distancePerTripKm, longTermParams.planDuration.value, longTermParams.tripFrequency.value].some(isNaN)) {
+            chartContainer.classList.add('hidden');
+            return;
+        }
+
+        chartContainer.classList.remove('hidden');
+
+        const speeds = [];
+        const totalCosts = [];
+        const monthlyCosts = [];
+        
+        for (let speed = 30; speed <= 140; speed += 10) {
+            speeds.push(speed);
+            const paramsForSpeed = { ...longTermParams, averageSpeedKmh: speed };
+            const results = calculator.planLongTermTrips(paramsForSpeed);
+            totalCosts.push(results['Grand Total Cost'].value);
+            monthlyCosts.push(results['Avg. Monthly Cost'].value);
+        }
+
+        costChart.data.labels = speeds;
+        costChart.data.datasets[0].data = totalCosts;
+        costChart.data.datasets[1].data = monthlyCosts;
+        costChart.options.scales.y.title.text = `Cost (${longTermParams.currency})`;
+        costChart.update();
+    };
+
+
     // --- MAIN CALCULATION LOGIC ---
     function calculate() {
         hideError();
         try {
-            // Read all input values
             const currency = currencySelect.value === 'other' ? customCurrencyInput.value.toUpperCase() : currencySelect.value;
             const fuelPrice = parseFloat(document.getElementById('fuelPrice').value);
             const tankCapacity = parseFloat(document.getElementById('tankCapacity').value);
@@ -268,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isNaN(fuelPrice) || isNaN(tankCapacity) || fuelEfficiency.length === 0) {
                 throw new Error("Please fill all vehicle profile fields with valid numbers.");
             }
-            if (currency.length === 0) {
+            if (!currency) {
                  throw new Error("Please select or enter a currency code.");
             }
 
@@ -305,12 +354,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if ([longTermParams.distancePerTripKm, longTermParams.planDuration.value, longTermParams.tripFrequency.value].some(isNaN)) {
                  longtermOutput.innerHTML = '<p class="text-gray-500">Enter all long-term plan fields to calculate.</p>';
+                 updateChart(null, null); // Hide chart
             } else {
                 longtermOutput.innerHTML = formatOutput(calculator.planLongTermTrips(longTermParams));
+                updateChart(calculator, longTermParams); // Update chart with data
             }
 
         } catch (error) {
             showError(error.message);
+            updateChart(null, null); // Hide chart on error
         }
     }
 
@@ -320,13 +372,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     currencySelect.addEventListener('change', (e) => {
-        customCurrencyInput.classList.toggle('hidden', e.target.value !== 'other');
-        if (e.target.value !== 'other') {
+        const isOther = e.target.value === 'other';
+        customCurrencyInput.classList.toggle('hidden', !isOther);
+        if (!isOther) {
             updateCurrencyUI(e.target.value);
-            calculate();
+        } else {
+            customCurrencyInput.focus();
         }
+        calculate(); // Calculate on any change
     });
     
+    customCurrencyInput.addEventListener('input', () => {
+        updateCurrencyUI(customCurrencyInput.value.toUpperCase());
+        calculate();
+    });
+
     planDurationUnit.addEventListener('change', () => {
         updateTripFrequencyOptions();
         calculate();
@@ -334,6 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     speedSlider.addEventListener('input', (e) => {
         speedValue.textContent = e.target.value;
+        // No need to call calculate() here, it's already handled by the generic listener
     });
 
     calculateBtn.addEventListener('click', calculate);
@@ -349,8 +410,29 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(button.getAttribute('data-tab')).classList.remove('hidden');
         });
     });
+    
+    clearProfileBtn.addEventListener('click', () => {
+        document.getElementById('fuelPrice').value = '';
+        document.getElementById('tankCapacity').value = '';
+        document.getElementById('fuelEfficiency').value = '';
+        calculate();
+    });
+
+    clearPlansBtn.addEventListener('click', () => {
+        document.getElementById('singleTripDistance').value = '';
+        document.getElementById('longTermDistance').value = '';
+        document.getElementById('planDurationValue').value = '1';
+        document.getElementById('tripFrequencyValue').value = '1';
+        document.getElementById('incomePercentage').value = '10';
+        recurringExpensesContainer.innerHTML = '';
+        tripExpensesContainer.innerHTML = '';
+        // No need to re-add rows, user can click the "Add" button
+        calculate();
+    });
+
 
     // --- INITIALIZATION ---
+    initializeChart();
     createExpenseRow('Recurring', recurringExpensesContainer);
     createExpenseRow('Per-Trip', tripExpensesContainer);
     updateTripFrequencyOptions();

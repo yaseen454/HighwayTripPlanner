@@ -4,13 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VTrip - Vehicle Trip Calculator</title>
-    <!-- Tailwind CSS for base styling -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts for a nicer typeface -->
+    <!-- Chart.js for visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Link to your custom stylesheet -->
+    <!-- Custom Stylesheet -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="min-h-screen flex flex-col">
@@ -21,7 +23,7 @@
             <p class="mt-1 text-md text-gray-600">Estimate your fuel and trip costs based on average speed.</p>
         </div>
         <!-- GitHub Link in Top Right -->
-        <a href="https://github.com/yaseen454/VTrip" target="_blank" class="absolute top-4 right-4 flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors">
+        <a href="https://github.com/yaseen454/VTrip" target="_blank" class="absolute top-4 right-4 flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors" title="View on GitHub">
             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.164 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.34-3.369-1.34-.454-1.153-1.11-1.46-1.11-1.46-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.087.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.646 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.026 2.747-1.026.546 1.376.203 2.394.1 2.646.64.699 1.026 1.592 1.026 2.683 0 3.841-2.337 4.687-4.565 4.935.359.31.678.921.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12c0-5.523-4.477-10-10-10z" clip-rule="evenodd"/>
             </svg>
@@ -33,7 +35,10 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Input Section -->
             <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-2xl font-semibold mb-6 text-gray-800 border-b pb-3">Your Trip Details</h2>
+                <div class="flex justify-between items-center border-b pb-3 mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800">Your Trip Details</h2>
+                    <button id="clearProfileBtn" class="clear-btn" title="Clear all inputs in this section">Clear</button>
+                </div>
                 <!-- Vehicle Profile -->
                 <div class="mb-6">
                     <h3 class="text-lg font-semibold text-gray-700 mb-3">🚗 Vehicle Profile</h3>
@@ -42,45 +47,54 @@
                         <div>
                             <label for="currency" class="block text-sm font-medium text-gray-600 mb-1">Currency</label>
                             <div class="input-group">
-                                <select id="currency" class="input-field rounded-r-none">
+                                <select id="currency" class="input-field rounded-r-none" title="Select your currency. Use 'Other' for custom codes.">
                                     <option value="EGP">EGP (Egyptian Pound)</option>
                                     <option value="USD">USD (US Dollar)</option>
                                     <option value="EUR">EUR (Euro)</option>
                                     <option value="GBP">GBP (British Pound)</option>
                                     <option value="other">Other...</option>
                                 </select>
-                                <input type="text" id="customCurrency" placeholder="Code" class="input-field rounded-l-none hidden w-24" maxlength="3">
+                                <input type="text" id="customCurrency" placeholder="Code" class="input-field rounded-l-none hidden w-24" maxlength="3" title="Enter a 3-letter currency code (e.g., JPY).">
                             </div>
                         </div>
                         <div>
                             <label for="fuelPrice" class="block text-sm font-medium text-gray-600 mb-1">Fuel Price (<span class="currency-label">EGP</span>/L)</label>
-                            <input type="number" id="fuelPrice" value="17.25" step="0.01" min="0" class="input-field">
+                            <input type="number" id="fuelPrice" value="17.25" step="0.01" min="0" class="input-field" title="Enter the cost of one liter of fuel.">
                         </div>
                         <div>
                             <label for="tankCapacity" class="block text-sm font-medium text-gray-600 mb-1">Tank Capacity (L)</label>
-                            <input type="number" id="tankCapacity" value="37" step="1" min="0" class="input-field">
+                            <input type="number" id="tankCapacity" value="37" step="1" min="0" class="input-field" title="Enter your vehicle's fuel tank capacity in liters.">
                         </div>
                         <div>
                             <label for="fuelEfficiency" class="block text-sm font-medium text-gray-600 mb-1">Fuel Efficiency (km/L, comma-separated)</label>
-                            <input type="text" id="fuelEfficiency" value="15,15.5,15.8,15.9,16" class="input-field">
+                            <input type="text" id="fuelEfficiency" value="15,15.5,15.8,15.9,16" class="input-field" title="Enter your car's fuel efficiency. You can add multiple values separated by commas to average them.">
                         </div>
                     </div>
                 </div>
                 <!-- Speed Slider -->
                 <div class="mb-6">
                     <h3 class="text-lg font-semibold text-gray-700 mb-3">🚀 Average Speed</h3>
-                    <input type="range" id="speedSlider" min="30" max="140" value="80" class="w-full speed-slider">
+                    <input type="range" id="speedSlider" min="30" max="140" value="80" class="w-full speed-slider" title="Adjust your average trip speed. Efficiency changes based on this value.">
                     <div class="text-center mt-2 text-gray-700">Speed: <span id="speedValue" class="font-bold text-blue-600 text-lg">80</span> km/h</div>
+                </div>
+                <!-- Speed-Cost Visualization -->
+                <div id="chartContainer" class="mt-6 hidden">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">📊 Cost vs. Speed</h3>
+                    <canvas id="costChart"></canvas>
                 </div>
             </div>
             <!-- Trip Inputs Section -->
             <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg relative">
+                 <div class="flex justify-between items-center border-b pb-3 mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800">Trip Plans</h2>
+                    <button id="clearPlansBtn" class="clear-btn" title="Clear all trip plan inputs">Clear</button>
+                </div>
                 <!-- Single Trip -->
                 <div class="mb-6">
                     <h3 class="text-lg font-semibold text-gray-700 mb-3">📍 Single Trip</h3>
                     <div>
                         <label for="singleTripDistance" class="block text-sm font-medium text-gray-600 mb-1">Distance (km)</label>
-                        <input type="number" id="singleTripDistance" value="115" step="1" min="0" class="input-field">
+                        <input type="number" id="singleTripDistance" value="115" step="1" min="0" class="input-field" title="Enter the total distance for a single, one-way trip.">
                     </div>
                 </div>
                 <!-- Long-Term Trip -->
@@ -91,8 +105,8 @@
                         <div>
                             <label for="planDurationValue" class="block text-sm font-medium text-gray-600 mb-1">Planning Duration</label>
                             <div class="input-group">
-                                <input type="number" id="planDurationValue" value="9" step="1" min="1" class="input-field rounded-r-none w-1/2">
-                                <select id="planDurationUnit" class="input-field rounded-l-none w-1/2">
+                                <input type="number" id="planDurationValue" value="9" step="1" min="1" class="input-field rounded-r-none w-1/2" title="Enter the total duration of your plan.">
+                                <select id="planDurationUnit" class="input-field rounded-l-none w-1/2" title="Select the unit for the plan duration.">
                                     <option value="days">Days</option>
                                     <option value="weeks">Weeks</option>
                                     <option value="months" selected>Months</option>
@@ -104,8 +118,8 @@
                         <div>
                             <label for="tripFrequencyValue" class="block text-sm font-medium text-gray-600 mb-1">Trip Frequency</label>
                             <div class="input-group">
-                                <input type="number" id="tripFrequencyValue" value="5" step="1" min="1" class="input-field rounded-r-none w-1/2">
-                                <select id="tripFrequencyUnit" class="input-field rounded-l-none w-1/2">
+                                <input type="number" id="tripFrequencyValue" value="5" step="1" min="1" class="input-field rounded-r-none w-1/2" title="Enter how many trips you make in the selected frequency.">
+                                <select id="tripFrequencyUnit" class="input-field rounded-l-none w-1/2" title="Select the frequency of your trips. This cannot exceed the plan duration.">
                                     <option value="day">per Day</option>
                                     <option value="week" selected>per Week</option>
                                     <option value="month">per Month</option>
@@ -114,12 +128,12 @@
                         </div>
                         <div>
                             <label for="longTermDistance" class="block text-sm font-medium text-gray-600 mb-1">Distance per Trip (km)</label>
-                            <input type="number" id="longTermDistance" value="115" step="1" min="0" class="input-field">
+                            <input type="number" id="longTermDistance" value="115" step="1" min="0" class="input-field" title="Enter the distance of a single recurring trip.">
                         </div>
                         <!-- Income Percentage -->
                         <div>
                             <label for="incomePercentage" class="block text-sm font-medium text-gray-600 mb-1">Monthly Cost as % of Income</label>
-                            <input type="number" id="incomePercentage" value="10" step="1" min="1" max="100" class="input-field">
+                            <input type="number" id="incomePercentage" value="10" step="1" min="1" max="100" class="input-field" title="Enter the percentage of your monthly income that this trip plan should represent.">
                         </div>
                         <!-- Recurring Expenses -->
                         <div>

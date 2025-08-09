@@ -175,3 +175,29 @@ body {
 .remove-btn:hover {
     transform: scale(1.1);
 }
+
+/* --- NEW STYLES --- */
+
+/* Clear Button Style */
+.clear-btn {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: 1px solid #fecaca;
+}
+
+.clear-btn:hover {
+    background-color: #fecaca;
+    color: #991b1b;
+}
+
+/* Chart Container Style */
+#chartContainer {
+    height: 250px; /* Give the chart a fixed height */
+    position: relative;
+    animation: fadeIn 0.5s ease-in-out;
+}
