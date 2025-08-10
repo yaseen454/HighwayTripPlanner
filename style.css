@@ -73,6 +73,10 @@ body {
 }
 
 /* Styles for the output tabs */
+nav[aria-label="Tabs"] {
+    flex-wrap: wrap;
+}
+
 .tab-btn {
     padding: 0.75rem 1rem;
     font-size: 0.875rem;
@@ -81,6 +85,7 @@ body {
     border-bottom: 3px solid transparent;
     transition: all 0.3s ease;
     cursor: pointer;
+    margin-bottom: 0.5rem; /* Add some space for wrapped tabs */
 }
 
 .tab-btn:hover {
@@ -200,4 +205,24 @@ body {
     height: 250px; /* Give the chart a fixed height */
     position: relative;
     animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Refuel Scenario Item Style */
+.output-item-refuel {
+    background-color: #f3e8ff; /* Light purple */
+    border-color: #c084fc;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #e9d5ff;
+}
+.output-item-refuel .label {
+    color: #7e22ce;
+    font-weight: 500;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+.output-item-refuel .value {
+    color: #6b21a8;
+    font-weight: 600;
+    font-size: 1.125rem;
 }

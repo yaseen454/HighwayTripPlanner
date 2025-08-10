@@ -89,6 +89,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 [`Income for Cost to be ${incomePercentage}%`]: { value: requiredIncome, unit: `${currency}/month` },
             };
         }
+
+        calculateRefuelScenarios(distancePerTripKm, averageSpeedKmh, currency) {
+            const adjustedEfficiency = this.getSpeedAdjustedEfficiency(averageSpeedKmh);
+            if (adjustedEfficiency <= 0) return [];
+            
+            const litersPerTrip = distancePerTripKm / adjustedEfficiency;
+            if (litersPerTrip <= 0) return [];
+
+            const maxTripsOnTank = Math.floor(this.maxFuelTankLiters / litersPerTrip);
+            if (maxTripsOnTank === 0) return [];
+
+            const scenarios = [];
+            for (let i = 1; i <= maxTripsOnTank; i++) {
+                const fuelForTrips = litersPerTrip * i;
+                const cost = fuelForTrips * this.fuelPricePerLiter;
+                scenarios.push({
+                    trips: i,
+                    cost: cost,
+                    currency: currency
+                });
+            }
+            return scenarios;
+        }
     }
 
     // --- DOM ELEMENTS ---
@@ -107,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const vehicleOutput = document.getElementById('vehicleOutput');
     const singleOutput = document.getElementById('singleOutput');
     const longtermOutput = document.getElementById('longtermOutput');
+    const longtermRefuelOutput = document.getElementById('longtermRefuelOutput');
     const errorOutput = document.getElementById('errorOutput');
     const errorText = errorOutput.querySelector('p');
     const tabButtons = document.querySelectorAll('.tab-btn');
@@ -124,8 +148,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const div = document.createElement('div');
         div.className = 'flex space-x-2 items-center';
         let html = `
-            <input type="text" placeholder="${type} name" class="input-field flex-grow" data-type="${type}-name">
-            <input type="number" placeholder="Cost" step="0.01" min="0" class="input-field w-24" data-type="${type}-cost">
+            <input type="text" placeholder="${type} name (Optional)" class="input-field flex-grow" data-type="${type}-name" title="Enter a name for this expense (optional).">
+            <input type="number" placeholder="Cost" step="0.01" min="0" class="input-field w-24" data-type="${type}-cost" title="Enter the cost for this expense.">
         `;
         if (type === 'Recurring') {
             html += `
@@ -152,11 +176,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const parseRecurringExpenses = (container) => {
         const results = [];
-        container.querySelectorAll('.flex').forEach(row => {
-            const name = row.querySelector('[data-type="Recurring-name"]').value.trim();
+        container.querySelectorAll('.flex').forEach((row, index) => {
+            let name = row.querySelector('[data-type="Recurring-name"]').value.trim();
             const cost = parseFloat(row.querySelector('[data-type="Recurring-cost"]').value);
             const period = row.querySelector('[data-type="Recurring-period"]').value;
-            if (name && !isNaN(cost) && cost > 0) {
+            if (!isNaN(cost) && cost > 0) {
+                if (!name) name = `Recurring Expense #${index + 1}`;
                 results.push({ name, cost, period });
             }
         });
@@ -165,10 +190,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const parsePerTripExpenses = (container) => {
         const result = {};
-        container.querySelectorAll('.flex').forEach(row => {
-            const name = row.querySelector('[data-type$="-name"]').value.trim();
+        container.querySelectorAll('.flex').forEach((row, index) => {
+            let name = row.querySelector('[data-type$="-name"]').value.trim();
             const cost = parseFloat(row.querySelector('[data-type$="-cost"]').value);
-            if (name && !isNaN(cost) && cost > 0) {
+            if (!isNaN(cost) && cost > 0) {
+                if (!name) name = `Per-Trip Expense #${index + 1}`;
                 result[name] = cost;
             }
         });
@@ -190,6 +216,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="value">${formattedValue} <span class="unit">${unit}</span></div>
                 </div>`;
         }
+        return html;
+    };
+
+    const formatRefuelOutput = (scenarios) => {
+        if (!scenarios || scenarios.length === 0) {
+            return '<p class="text-gray-500 text-center p-4">Cannot complete a single trip on a full tank, or no long-term trip distance is set.</p>';
+        }
+        let html = '<h3 class="text-lg font-semibold text-gray-700 mb-3 text-center">⛽ Refuel Scenarios</h3>';
+        scenarios.forEach(scenario => {
+            const formattedCost = scenario.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            html += `
+                <div class="output-item-refuel">
+                    <div class="label">Refuel after ${scenario.trips} trip(s)</div>
+                    <div class="value">${formattedCost} <span class="unit">${scenario.currency}</span></div>
+                </div>
+            `;
+        });
         return html;
     };
     
@@ -259,6 +302,11 @@ document.addEventListener('DOMContentLoaded', () => {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: {
+                    padding: {
+                        bottom: 10 // Adds padding to the bottom of the chart area, preventing label cutoff
+                    }
+                },
                 scales: {
                     x: { title: { display: true, text: 'Speed (km/h)' } },
                     y: { title: { display: true, text: 'Cost' }, beginAtZero: true }
@@ -277,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateChart = (calculator, longTermParams) => {
-        if (!calculator || !longTermParams || [longTermParams.distancePerTripKm, longTermParams.planDuration.value, longTermParams.tripFrequency.value].some(isNaN)) {
+        if (!calculator || !longTermParams || [longTermParams.distancePerTripKm, longTermParams.planDuration.value, longTermParams.tripFrequency.value].some(val => isNaN(val) || val <= 0)) {
             chartContainer.classList.add('hidden');
             return;
         }
@@ -307,6 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- MAIN CALCULATION LOGIC ---
     function calculate() {
         hideError();
+        longtermRefuelOutput.innerHTML = ''; // Clear previous refuel scenarios
         try {
             const currency = currencySelect.value === 'other' ? customCurrencyInput.value.toUpperCase() : currencySelect.value;
             const fuelPrice = parseFloat(document.getElementById('fuelPrice').value);
@@ -352,7 +401,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 currency: currency
             };
 
-            if ([longTermParams.distancePerTripKm, longTermParams.planDuration.value, longTermParams.tripFrequency.value].some(isNaN)) {
+            // Calculate and display refuel scenarios
+            const refuelScenarios = calculator.calculateRefuelScenarios(longTermParams.distancePerTripKm, averageSpeed, currency);
+            longtermRefuelOutput.innerHTML = formatRefuelOutput(refuelScenarios);
+
+            if ([longTermParams.distancePerTripKm, longTermParams.planDuration.value, longTermParams.tripFrequency.value].some(val => isNaN(val) || val <= 0)) {
                  longtermOutput.innerHTML = '<p class="text-gray-500">Enter all long-term plan fields to calculate.</p>';
                  updateChart(null, null); // Hide chart
             } else {
@@ -394,7 +447,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     speedSlider.addEventListener('input', (e) => {
         speedValue.textContent = e.target.value;
-        // No need to call calculate() here, it's already handled by the generic listener
     });
 
     calculateBtn.addEventListener('click', calculate);
@@ -421,20 +473,17 @@ document.addEventListener('DOMContentLoaded', () => {
     clearPlansBtn.addEventListener('click', () => {
         document.getElementById('singleTripDistance').value = '';
         document.getElementById('longTermDistance').value = '';
-        document.getElementById('planDurationValue').value = '1';
-        document.getElementById('tripFrequencyValue').value = '1';
+        document.getElementById('planDurationValue').value = '9';
+        document.getElementById('tripFrequencyValue').value = '5';
         document.getElementById('incomePercentage').value = '10';
         recurringExpensesContainer.innerHTML = '';
         tripExpensesContainer.innerHTML = '';
-        // No need to re-add rows, user can click the "Add" button
         calculate();
     });
 
 
     // --- INITIALIZATION ---
     initializeChart();
-    createExpenseRow('Recurring', recurringExpensesContainer);
-    createExpenseRow('Per-Trip', tripExpensesContainer);
     updateTripFrequencyOptions();
     calculate();
 });
