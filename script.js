@@ -90,18 +90,18 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         }
 
-        calculateRefuelScenarios(distancePerTripKm, averageSpeedKmh, currency) {
+        calculateRefuelScenarios(distancePerTripKm, averageSpeedKmh, currency, increment) {
             const adjustedEfficiency = this.getSpeedAdjustedEfficiency(averageSpeedKmh);
             if (adjustedEfficiency <= 0) return [];
             
             const litersPerTrip = distancePerTripKm / adjustedEfficiency;
             if (litersPerTrip <= 0) return [];
 
-            const maxTripsOnTank = Math.floor(this.maxFuelTankLiters / litersPerTrip);
-            if (maxTripsOnTank === 0) return [];
+            const maxTripsOnTank = this.maxFuelTankLiters / litersPerTrip;
+            if (maxTripsOnTank < increment) return [];
 
             const scenarios = [];
-            for (let i = 1; i <= maxTripsOnTank; i++) {
+            for (let i = increment; i <= maxTripsOnTank; i += increment) {
                 const fuelForTrips = litersPerTrip * i;
                 const cost = fuelForTrips * this.fuelPricePerLiter;
                 scenarios.push({
@@ -223,12 +223,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!scenarios || scenarios.length === 0) {
             return '<p class="text-gray-500 text-center p-4">Cannot complete a single trip on a full tank, or no long-term trip distance is set.</p>';
         }
-        let html = '<h3 class="text-lg font-semibold text-gray-700 mb-3 text-center">⛽ Refuel Scenarios</h3>';
+        let html = '';
         scenarios.forEach(scenario => {
             const formattedCost = scenario.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const tripLabel = Number.isInteger(scenario.trips) ? scenario.trips : scenario.trips.toFixed(1);
             html += `
                 <div class="output-item-refuel">
-                    <div class="label">Refuel after ${scenario.trips} trip(s)</div>
+                    <div class="label">Refuel after ${tripLabel} trip(s)</div>
                     <div class="value">${formattedCost} <span class="unit">${scenario.currency}</span></div>
                 </div>
             `;
@@ -362,12 +363,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const tankCapacity = parseFloat(document.getElementById('tankCapacity').value);
             const fuelEfficiency = parseInputList(document.getElementById('fuelEfficiency').value);
             const averageSpeed = parseFloat(speedSlider.value);
+            const refuelIncrement = parseFloat(document.getElementById('refuelIncrement').value);
 
             if (isNaN(fuelPrice) || isNaN(tankCapacity) || fuelEfficiency.length === 0) {
                 throw new Error("Please fill all vehicle profile fields with valid numbers.");
             }
             if (!currency) {
                  throw new Error("Please select or enter a currency code.");
+            }
+            if (isNaN(refuelIncrement) || refuelIncrement <= 0) {
+                throw new Error("Refuel increment must be a positive number.");
             }
 
             const calculator = new FuelCalculator(fuelPrice, tankCapacity, fuelEfficiency);
@@ -383,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 singleOutput.innerHTML = '<p class="text-gray-500">Enter a distance to calculate.</p>';
             }
 
-            // 3. Long-Term Plan
+            // 3. Long-Term Plan & Refuel Scenarios
             const longTermParams = {
                 distancePerTripKm: parseFloat(document.getElementById('longTermDistance').value),
                 planDuration: {
@@ -401,8 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currency: currency
             };
 
-            // Calculate and display refuel scenarios
-            const refuelScenarios = calculator.calculateRefuelScenarios(longTermParams.distancePerTripKm, averageSpeed, currency);
+            const refuelScenarios = calculator.calculateRefuelScenarios(longTermParams.distancePerTripKm, averageSpeed, currency, refuelIncrement);
             longtermRefuelOutput.innerHTML = formatRefuelOutput(refuelScenarios);
 
             if ([longTermParams.distancePerTripKm, longTermParams.planDuration.value, longTermParams.tripFrequency.value].some(val => isNaN(val) || val <= 0)) {
