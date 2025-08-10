@@ -226,3 +226,50 @@ nav[aria-label="Tabs"] {
     font-weight: 600;
     font-size: 1.125rem;
 }
+.output-item-refuel .distance-sublabel {
+    font-size: 0.8rem;
+    color: #9333ea;
+    font-weight: 500;
+    margin-top: 0.25rem;
+}
+
+/* Info Icon and Tooltip Styles */
+.label-with-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #4b5563;
+    margin-bottom: 0.25rem;
+}
+.info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    background-color: #d1d5db;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+}
+.info-icon:hover {
+    background-color: #9ca3af;
+}
+.custom-tooltip {
+    position: absolute;
+    background-color: #1f2937;
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    z-index: 10;
+    max-width: 200px;
+    text-align: center;
+    pointer-events: none; /* Allows clicks to pass through */
+}

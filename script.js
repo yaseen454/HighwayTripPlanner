@@ -104,9 +104,11 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let i = increment; i <= maxTripsOnTank; i += increment) {
                 const fuelForTrips = litersPerTrip * i;
                 const cost = fuelForTrips * this.fuelPricePerLiter;
+                const distance = distancePerTripKm * i;
                 scenarios.push({
                     trips: i,
                     cost: cost,
+                    distance: distance,
                     currency: currency
                 });
             }
@@ -148,12 +150,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const div = document.createElement('div');
         div.className = 'flex space-x-2 items-center';
         let html = `
-            <input type="text" placeholder="${type} name (Optional)" class="input-field flex-grow" data-type="${type}-name" title="Enter a name for this expense (optional).">
-            <input type="number" placeholder="Cost" step="0.01" min="0" class="input-field w-24" data-type="${type}-cost" title="Enter the cost for this expense.">
+            <input type="text" placeholder="${type} name (Optional)" class="input-field flex-grow" data-type="${type}-name">
+            <input type="number" placeholder="Cost" step="0.01" min="0" class="input-field w-24" data-type="${type}-cost">
         `;
         if (type === 'Recurring') {
             html += `
-                <select class="input-field w-28" data-type="${type}-period" title="Select how often this expense occurs.">
+                <select class="input-field w-28" data-type="${type}-period">
                     <option value="day">per Day</option>
                     <option value="week">per Week</option>
                     <option value="month" selected>per Month</option>
@@ -226,11 +228,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let html = '';
         scenarios.forEach(scenario => {
             const formattedCost = scenario.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const formattedDistance = scenario.distance.toLocaleString('en-US', { maximumFractionDigits: 0 });
             const tripLabel = Number.isInteger(scenario.trips) ? scenario.trips : scenario.trips.toFixed(1);
             html += `
                 <div class="output-item-refuel">
                     <div class="label">Refuel after ${tripLabel} trip(s)</div>
                     <div class="value">${formattedCost} <span class="unit">${scenario.currency}</span></div>
+                    <div class="distance-sublabel">${formattedDistance} km</div>
                 </div>
             `;
         });
@@ -352,11 +356,67 @@ document.addEventListener('DOMContentLoaded', () => {
         costChart.update();
     };
 
+    // --- TOOLTIP LOGIC ---
+    const setupTooltips = () => {
+        let activeTooltip = null;
+
+        const removeActiveTooltip = () => {
+            if (activeTooltip) {
+                activeTooltip.remove();
+                activeTooltip = null;
+            }
+        };
+
+        const showTooltip = (icon) => {
+            removeActiveTooltip(); 
+
+            const tooltipText = icon.dataset.tooltip;
+            if (!tooltipText) return;
+
+            activeTooltip = document.createElement('div');
+            activeTooltip.className = 'custom-tooltip';
+            activeTooltip.textContent = tooltipText;
+            document.body.appendChild(activeTooltip);
+
+            const iconRect = icon.getBoundingClientRect();
+            const tooltipRect = activeTooltip.getBoundingClientRect();
+
+            let top = iconRect.bottom + window.scrollY + 5;
+            let left = iconRect.left + window.scrollX + (iconRect.width / 2) - (tooltipRect.width / 2);
+
+            if (left < 0) left = 5;
+            if (left + tooltipRect.width > window.innerWidth) left = window.innerWidth - tooltipRect.width - 5;
+
+            activeTooltip.style.top = `${top}px`;
+            activeTooltip.style.left = `${left}px`;
+        };
+
+        document.body.addEventListener('mouseover', (e) => {
+            if (e.target.matches('.info-icon')) {
+                showTooltip(e.target);
+            }
+        });
+
+        document.body.addEventListener('mouseout', (e) => {
+            if (e.target.matches('.info-icon')) {
+                removeActiveTooltip();
+            }
+        });
+
+        document.body.addEventListener('click', (e) => {
+            if (e.target.matches('.info-icon')) {
+                e.stopPropagation();
+                showTooltip(e.target);
+            } else {
+                removeActiveTooltip();
+            }
+        });
+    };
 
     // --- MAIN CALCULATION LOGIC ---
     function calculate() {
         hideError();
-        longtermRefuelOutput.innerHTML = ''; // Clear previous refuel scenarios
+        longtermRefuelOutput.innerHTML = '';
         try {
             const currency = currencySelect.value === 'other' ? customCurrencyInput.value.toUpperCase() : currencySelect.value;
             const fuelPrice = parseFloat(document.getElementById('fuelPrice').value);
@@ -376,11 +436,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const calculator = new FuelCalculator(fuelPrice, tankCapacity, fuelEfficiency);
-
-            // 1. Vehicle Profile
             vehicleOutput.innerHTML = formatOutput(calculator.getVehicleProfile(currency));
-
-            // 2. Single Trip
+            
             const singleTripDistance = parseFloat(document.getElementById('singleTripDistance').value);
             if (!isNaN(singleTripDistance) && singleTripDistance > 0) {
                 singleOutput.innerHTML = formatOutput(calculator.calculateSingleTrip(singleTripDistance, averageSpeed, currency));
@@ -388,17 +445,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 singleOutput.innerHTML = '<p class="text-gray-500">Enter a distance to calculate.</p>';
             }
 
-            // 3. Long-Term Plan & Refuel Scenarios
             const longTermParams = {
                 distancePerTripKm: parseFloat(document.getElementById('longTermDistance').value),
-                planDuration: {
-                    value: parseInt(document.getElementById('planDurationValue').value, 10),
-                    unit: document.getElementById('planDurationUnit').value,
-                },
-                tripFrequency: {
-                    value: parseInt(document.getElementById('tripFrequencyValue').value, 10),
-                    unit: document.getElementById('tripFrequencyUnit').value,
-                },
+                planDuration: { value: parseInt(document.getElementById('planDurationValue').value, 10), unit: document.getElementById('planDurationUnit').value },
+                tripFrequency: { value: parseInt(document.getElementById('tripFrequencyValue').value, 10), unit: document.getElementById('tripFrequencyUnit').value },
                 averageSpeedKmh: averageSpeed,
                 recurringExpenses: parseRecurringExpenses(recurringExpensesContainer),
                 expensesPerTrip: parsePerTripExpenses(tripExpensesContainer),
@@ -411,53 +461,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if ([longTermParams.distancePerTripKm, longTermParams.planDuration.value, longTermParams.tripFrequency.value].some(val => isNaN(val) || val <= 0)) {
                  longtermOutput.innerHTML = '<p class="text-gray-500">Enter all long-term plan fields to calculate.</p>';
-                 updateChart(null, null); // Hide chart
+                 updateChart(null, null);
             } else {
                 longtermOutput.innerHTML = formatOutput(calculator.planLongTermTrips(longTermParams));
-                updateChart(calculator, longTermParams); // Update chart with data
+                updateChart(calculator, longTermParams);
             }
 
         } catch (error) {
             showError(error.message);
-            updateChart(null, null); // Hide chart on error
+            updateChart(null, null);
         }
     }
 
     // --- EVENT LISTENERS ---
-    document.querySelectorAll('input, select').forEach(input => {
-        input.addEventListener('input', calculate);
-    });
-
+    document.querySelectorAll('input, select').forEach(input => input.addEventListener('input', calculate));
     currencySelect.addEventListener('change', (e) => {
         const isOther = e.target.value === 'other';
         customCurrencyInput.classList.toggle('hidden', !isOther);
-        if (!isOther) {
-            updateCurrencyUI(e.target.value);
-        } else {
-            customCurrencyInput.focus();
-        }
-        calculate(); // Calculate on any change
-    });
-    
-    customCurrencyInput.addEventListener('input', () => {
-        updateCurrencyUI(customCurrencyInput.value.toUpperCase());
+        if (!isOther) updateCurrencyUI(e.target.value);
+        else customCurrencyInput.focus();
         calculate();
     });
-
+    customCurrencyInput.addEventListener('input', () => updateCurrencyUI(customCurrencyInput.value.toUpperCase()));
     planDurationUnit.addEventListener('change', () => {
         updateTripFrequencyOptions();
         calculate();
     });
-
-    speedSlider.addEventListener('input', (e) => {
-        speedValue.textContent = e.target.value;
-    });
-
+    speedSlider.addEventListener('input', (e) => speedValue.textContent = e.target.value);
     calculateBtn.addEventListener('click', calculate);
-
     addRecurringExpenseBtn.addEventListener('click', () => createExpenseRow('Recurring', recurringExpensesContainer));
     addTripExpenseBtn.addEventListener('click', () => createExpenseRow('Per-Trip', tripExpensesContainer));
-
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
             tabButtons.forEach(btn => btn.classList.remove('active'));
@@ -466,14 +499,12 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(button.getAttribute('data-tab')).classList.remove('hidden');
         });
     });
-    
     clearProfileBtn.addEventListener('click', () => {
         document.getElementById('fuelPrice').value = '';
         document.getElementById('tankCapacity').value = '';
         document.getElementById('fuelEfficiency').value = '';
         calculate();
     });
-
     clearPlansBtn.addEventListener('click', () => {
         document.getElementById('singleTripDistance').value = '';
         document.getElementById('longTermDistance').value = '';
@@ -485,9 +516,9 @@ document.addEventListener('DOMContentLoaded', () => {
         calculate();
     });
 
-
     // --- INITIALIZATION ---
     initializeChart();
     updateTripFrequencyOptions();
+    setupTooltips();
     calculate();
 });
